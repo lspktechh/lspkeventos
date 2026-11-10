@@ -44,7 +44,7 @@ jobs:
           # HTTPS obrigatório: o site é uma página HTTPS e o navegador bloqueia
           # chamada a HTTP puro (mixed content). Para trocar o backend sem mexer
           # no código, defina a variável `API_URL` em Settings → Variables.
-          NEXT_PUBLIC_API_URL: ${{ vars.API_URL || 'https://137-131-233-254.sslip.io' }}
+          NEXT_PUBLIC_API_URL: ${{ vars.API_URL || 'https://painel.lspk.com.br' }}
         run: npm run build
 
       - uses: actions/upload-pages-artifact@v3

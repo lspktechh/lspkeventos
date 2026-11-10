@@ -10,5 +10,5 @@
  * funciona porque `next dev` também roda em HTTP.
  */
 export const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ?? "https://137-131-233-254.sslip.io"
+  process.env.NEXT_PUBLIC_API_URL ?? "https://painel.lspk.com.br"
 ).replace(/\/+$/, "");
