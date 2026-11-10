@@ -29,6 +29,11 @@ interface Evento {
   startDate: string;
   endDate: string;
   registrationsOpen: boolean;
+  /**
+   * O organizador ligou a inscrição por este site? Ausente = backend antigo,
+   * que não manda o campo: nesse caso o formulário continua disponível.
+   */
+  registrationInPortal?: boolean;
   siteContent: Conteudo | null;
 }
 
@@ -319,7 +324,9 @@ export function InscricaoCliente({ slug }: { slug: string }) {
           </div>
         )}
 
-        {!evento.registrationsOpen ? (
+        {evento.registrationInPortal === false ? (
+          <p className={estilos.fechado}>A inscrição deste evento não é feita por este site.</p>
+        ) : !evento.registrationsOpen ? (
           <p className={estilos.fechado}>As inscrições para este evento estão encerradas.</p>
         ) : (
           <form onSubmit={enviar} className={estilos.form} noValidate id="inscricao">
