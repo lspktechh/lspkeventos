@@ -7,34 +7,21 @@ import { loginAttendee, verifyEmail } from "@/lib/api";
 import { API_URL } from "@/lib/backend";
 import { comBase } from "@/lib/caminho";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { CalendarIcon, ClockIcon, MapPinIcon, CheckCircleIcon } from "@/components/Icons";
 import estilos from "@/components/portal/portal.module.css";
-
-/**
- * Página pública de inscrição.
- *
- * O evento vem pelo SLUG, e não por um id cravado aqui: id no código
- * sobrevive ao evento e aponta para o lugar errado no ano seguinte.
- *
- * Depois de inscrever, a pessoa é levada direto para o QR Code — sem
- * pedir que "entre de novo com o e-mail". Ela acabou de digitar o
- * e-mail; pedir outra vez seria burocracia inventada.
- */
 
 const VERSAO_DO_TERMO = "1.0";
 
-interface Evento {
-  id: string;
-  name: string;
-  location: string | null;
-  startDate: string;
-  endDate: string;
-  registrationsOpen: boolean;
-  /**
-   * O organizador ligou a inscrição por este site? Ausente = backend antigo,
-   * que não manda o campo: nesse caso o formulário continua disponível.
-   */
-  registrationInPortal?: boolean;
-  siteContent: Conteudo | null;
+interface RegistrationFormConfig {
+  fields?: {
+    name?: boolean;
+    email?: boolean;
+    cpf?: boolean;
+    phone?: boolean;
+  };
+  customTitle?: string | null;
+  customDescription?: string | null;
+  bannerUrl?: string | null;
 }
 
 interface Tema {
@@ -54,11 +41,24 @@ interface Conteudo {
   cargaHoraria?: string;
   realizacao?: string[];
   destaques?: { titulo: string; texto: string }[];
-  /** Inscrição em equipe (ex.: maratonas de programação). Ausente = individual. */
   equipe?: { tamanho: number };
+  bannerUrl?: string | null;
+  imageUrl?: string | null;
+  registrationForm?: RegistrationFormConfig;
 }
 
-/** Máscara de CPF, aplicada enquanto digita. */
+interface Evento {
+  id: string;
+  name: string;
+  description?: string | null;
+  location: string | null;
+  startDate: string;
+  endDate: string;
+  registrationsOpen: boolean;
+  registrationInPortal?: boolean;
+  siteContent: Conteudo | null;
+}
+
 function formatarCpf(v: string): string {
   const d = v.replace(/\D/g, "").slice(0, 11);
   return d
@@ -78,12 +78,6 @@ function formatarTelefone(v: string): string {
   return d.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
 }
 
-/**
- * Valida o CPF pelos dígitos verificadores.
- *
- * Contar 11 dígitos não basta: "11111111111" tem onze. Um CPF inválido só
- * apareceria no dia do credenciamento, quando não dá mais para corrigir.
- */
 function cpfValido(bruto: string): boolean {
   const cpf = bruto.replace(/\D/g, "");
   if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
@@ -134,9 +128,6 @@ export function InscricaoCliente({ slug }: { slug: string }) {
     }
   }
 
-  // Inscrição em equipe (ver Conteudo.equipe): nomeEquipe + o nome de cada
-  // integrante ALÉM do líder (que já é a pessoa preenchendo o formulário
-  // acima). Fica vazio/sem efeito em qualquer evento sem inscrição em equipe.
   const [nomeEquipe, setNomeEquipe] = useState("");
   const [integrantes, setIntegrantes] = useState<string[]>([]);
   const [semEquipe, setSemEquipe] = useState(false);
@@ -162,6 +153,21 @@ export function InscricaoCliente({ slug }: { slug: string }) {
   const c: Conteudo = evento?.siteContent ?? {};
   const equipeConfig = c.equipe;
 
+  const formFields = c.registrationForm?.fields ?? {
+    name: true,
+    email: true,
+    cpf: true,
+    phone: false,
+  };
+  const exigeNome = formFields.name !== false;
+  const exigeEmail = formFields.email !== false;
+  const exigeCpf = formFields.cpf !== false;
+  const exigeTelefone = formFields.phone === true;
+
+  const banner = c.bannerUrl || c.registrationForm?.bannerUrl || c.imageUrl;
+  const tituloExibicao = c.registrationForm?.customTitle || c.heroTitulo || evento?.name || "";
+  const descricaoExibicao = c.registrationForm?.customDescription || c.heroTexto || evento?.description || null;
+
   const dataFormatada = evento
     ? new Date(evento.startDate).toLocaleDateString("pt-BR", {
         day: "2-digit",
@@ -171,7 +177,7 @@ export function InscricaoCliente({ slug }: { slug: string }) {
       })
     : "";
 
-  const horaFormatada = evento
+  const horaInicioFormatada = evento
     ? new Date(evento.startDate).toLocaleTimeString("pt-BR", {
         hour: "2-digit",
         minute: "2-digit",
@@ -179,13 +185,38 @@ export function InscricaoCliente({ slug }: { slug: string }) {
       })
     : "";
 
+  const horaFimFormatada = evento?.endDate
+    ? new Date(evento.endDate).toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "America/Sao_Paulo",
+      })
+    : "";
+
+  const horarioFormatado =
+    horaFimFormatada && horaFimFormatada !== horaInicioFormatada
+      ? `${horaInicioFormatada} às ${horaFimFormatada}`
+      : horaInicioFormatada;
+
   async function enviar(ev: FormEvent) {
     ev.preventDefault();
     if (!evento) return;
     setErro(null);
 
-    if (!cpfValido(cpf)) {
+    if (exigeNome && !nome.trim()) {
+      setErro("Informe seu nome.");
+      return;
+    }
+    if (exigeEmail && !email.trim()) {
+      setErro("Informe seu e-mail.");
+      return;
+    }
+    if (exigeCpf && !cpfValido(cpf)) {
       setErro("Confira o CPF — os dígitos não batem.");
+      return;
+    }
+    if (exigeTelefone && !telefone.trim()) {
+      setErro("Informe seu número de celular / WhatsApp.");
       return;
     }
     if (!aceite) {
@@ -209,12 +240,12 @@ export function InscricaoCliente({ slug }: { slug: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // O backend guarda um nome só; o formulário pede separado
-          // porque é como as pessoas esperam preencher.
-          name: `${nome.trim()} ${sobrenome.trim()}`.replace(/\s+/g, " ").trim(),
+          name: exigeNome
+            ? `${nome.trim()} ${sobrenome.trim()}`.replace(/\s+/g, " ").trim()
+            : (email.split("@")[0] || "Participante"),
           email: email.trim().toLowerCase(),
-          document: cpf.replace(/\D/g, ""),
-          phone: telefone.replace(/\D/g, "") || null,
+          document: exigeCpf ? cpf.replace(/\D/g, "") : null,
+          phone: exigeTelefone ? telefone.replace(/\D/g, "") || null : null,
           consentVersion: VERSAO_DO_TERMO,
           ...(equipeConfig
             ? semEquipe
@@ -232,8 +263,6 @@ export function InscricaoCliente({ slug }: { slug: string }) {
         throw new Error(detalhe || corpo?.error?.message || "Não consegui concluir a inscrição.");
       }
 
-      // Já entra na área do participante: o QR Code aparece na sequência,
-      // sem pedir para digitar o e-mail de novo.
       try {
         const login = await loginAttendee(email.trim().toLowerCase());
         if (login.data.token) {
@@ -243,8 +272,7 @@ export function InscricaoCliente({ slug }: { slug: string }) {
           return;
         }
       } catch {
-        // A inscrição JÁ está feita. Falhar aqui não pode parecer que
-        // nada aconteceu — a tela abaixo explica o que fazer.
+        // Inscrição já realizada
       }
       router.push(`/?inscrito=1&email=${encodeURIComponent(email.trim().toLowerCase())}`);
     } catch (e) {
@@ -253,7 +281,6 @@ export function InscricaoCliente({ slug }: { slug: string }) {
       setEnviando(false);
     }
   }
-
 
   if (carregando) {
     return (
@@ -267,10 +294,12 @@ export function InscricaoCliente({ slug }: { slug: string }) {
     return (
       <PortalShell aba="inscricao">
         <section className={estilos.secao}>
-          <h1 className={estilos.titulo}>Evento não encontrado</h1>
-          {erroDaPagina && <p className={estilos.lead}>{erroDaPagina}</p>}
+          <h1 className={estilos.titulo}>Inscrições Indisponíveis</h1>
+          <p className={estilos.lead}>
+            Este evento não está disponível para inscrição ou já foi encerrado.
+          </p>
           <p className={estilos.centro}>
-            <Link href="/inscricao">Ver inscrições abertas</Link>
+            <Link href="/inscricao">Ver outras inscrições abertas</Link>
           </p>
         </section>
       </PortalShell>
@@ -278,21 +307,36 @@ export function InscricaoCliente({ slug }: { slug: string }) {
   }
 
   const isEcohub = slug.toLowerCase().includes("ecohub");
-
-  // Evento que já começou deixa de ser "o próximo".
   const jaComecou = new Date(evento.startDate).getTime() < Date.now();
 
-  // Linha de apoio sob a data: quem realiza, o certificado e o formato.
-  const detalhes = [
-    c.realizacao?.join(" · "),
-    c.cargaHoraria ?? "Com certificado",
-    equipeConfig ? `Em equipe · ${equipeConfig.tamanho} pessoas` : null,
-  ].filter(Boolean);
-
   return (
-    <PortalShell aba="inscricao">
-      <section className={estilos.secao} style={{ gap: 28 }}>
-        <div className={estilos.cabecaSecao}>
+    <PortalShell aba="inscricao" larga>
+      <div style={{ marginBottom: "20px" }}>
+        <Link
+          href="/inscricao"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            fontSize: "14px",
+            color: "var(--link)",
+            textDecoration: "none",
+            fontWeight: 500,
+          }}
+        >
+          ← Ver todos os eventos
+        </Link>
+      </div>
+
+      <div className={estilos.layoutInscricao}>
+        {/* Painel com detalhes do evento */}
+        <section className={estilos.painelDetalhes}>
+          {banner && (
+            <div className={estilos.bannerHero}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={banner} alt={tituloExibicao} />
+            </div>
+          )}
           {isEcohub && (
             <div className={estilos.logoParceiro}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -303,195 +347,262 @@ export function InscricaoCliente({ slug }: { slug: string }) {
               />
             </div>
           )}
-          <span className={estilos.rotuloMono}>{jaComecou ? "Inscrições abertas" : "Próximo evento"}</span>
-          <h1 className={estilos.titulo}>{c.heroTitulo ?? evento.name}</h1>
-          {c.heroSubtitulo && <p className={estilos.subtituloEvento}>{c.heroSubtitulo}</p>}
-          <p className={estilos.metaEvento}>
-            {dataFormatada} · {horaFormatada} · {c.local ?? evento.location ?? "Local a confirmar"}
-          </p>
-          <p className={estilos.metaSecundaria}>{detalhes.join(" · ")}</p>
-          {c.heroTexto && <p className={estilos.lead}>{c.heroTexto}</p>}
-        </div>
 
-        {c.destaques && c.destaques.length > 0 && (
-          <div className={estilos.destaques}>
-            {c.destaques.map((d) => (
-              <article key={d.titulo} className={estilos.destaque}>
-                <h2>{d.titulo}</h2>
-                <p>{d.texto}</p>
-              </article>
-            ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <span className={estilos.badgeAberto}>
+              <span className={estilos.pontoAberto}></span>
+              {jaComecou ? "Inscrições abertas" : "Próximo evento"}
+            </span>
+            <h1 className={estilos.titulo} style={{ marginTop: "6px" }}>{tituloExibicao}</h1>
+            {c.heroSubtitulo && <p className={estilos.subtituloEvento}>{c.heroSubtitulo}</p>}
           </div>
-        )}
 
-        {evento.registrationInPortal === false ? (
-          <p className={estilos.fechado}>A inscrição deste evento não é feita por este site.</p>
-        ) : !evento.registrationsOpen ? (
-          <p className={estilos.fechado}>As inscrições para este evento estão encerradas.</p>
-        ) : (
-          <form onSubmit={enviar} className={estilos.form} noValidate id="inscricao">
-            <label className={estilos.campo}>
-              Nome
-              <input
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                required
-                autoComplete="given-name"
-                placeholder="Maria"
-              />
-            </label>
-
-            <label className={estilos.campo}>
-              Sobrenome
-              <input
-                value={sobrenome}
-                onChange={(e) => setSobrenome(e.target.value)}
-                required
-                autoComplete="family-name"
-                placeholder="Souza"
-              />
-              <small>Nome e sobrenome saem como você escrever no certificado.</small>
-            </label>
-
-            <label className={estilos.campo}>
-              E-mail
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (emailError || emailSuggestion) {
-                    setEmailError(null);
-                    setEmailSuggestion(null);
-                  }
-                }}
-                onBlur={handleEmailBlur}
-                required
-                autoComplete="email"
-                inputMode="email"
-                placeholder="seu@email.com"
-              />
-              <small>É por ele que você acessa seu QR Code e o certificado.</small>
-              {emailSuggestion && (
-                <div className={estilos.sugestao}>
-                  <span>
-                    Você quis dizer <strong>{emailSuggestion}</strong>?
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail(emailSuggestion);
-                      setEmailSuggestion(null);
-                      setEmailError(null);
-                    }}
-                  >
-                    Corrigir
-                  </button>
-                </div>
-              )}
-              {emailError && !emailSuggestion && (
-                <span role="alert" className={estilos.erroCampo}>
-                  {emailError}
-                </span>
-              )}
-            </label>
-
-            <label className={estilos.campo}>
-              CPF
-              <input
-                value={cpf}
-                onChange={(e) => setCpf(formatarCpf(e.target.value))}
-                required
-                inputMode="numeric"
-                placeholder="000.000.000-00"
-              />
-            </label>
-
-            <label className={estilos.campo}>
-              Celular
-              <input
-                value={telefone}
-                onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
-                inputMode="tel"
-                autoComplete="tel"
-                placeholder="(00) 00000-0000"
-              />
-            </label>
-
-            {equipeConfig && (
-              <>
-                <label className={estilos.aceite}>
-                  <input
-                    type="checkbox"
-                    checked={semEquipe}
-                    onChange={(e) => setSemEquipe(e.target.checked)}
-                  />
-                  <span>
-                    Não tenho equipe formada — quero ser alocado(a) em uma equipe sorteada pela
-                    organização.
-                  </span>
-                </label>
-
-                {!semEquipe && (
-                  <>
-                    <label className={estilos.campo}>
-                      Nome da equipe
-                      <input
-                        value={nomeEquipe}
-                        onChange={(e) => setNomeEquipe(e.target.value)}
-                        required
-                        placeholder="Nome da sua equipe"
-                      />
-                      <small>
-                        Você é o líder/representante da equipe. Informe abaixo o nome dos outros{" "}
-                        {integrantes.length} integrantes — cada um recebe certificado individual.
-                      </small>
-                    </label>
-
-                    {integrantes.map((valor, i) => (
-                      <label className={estilos.campo} key={i}>
-                        {`Integrante ${i + 2} — nome completo`}
-                        <input
-                          value={valor}
-                          onChange={(e) => {
-                            const proximos = [...integrantes];
-                            proximos[i] = e.target.value;
-                            setIntegrantes(proximos);
-                          }}
-                          required
-                          placeholder="Nome completo"
-                        />
-                      </label>
-                    ))}
-                  </>
-                )}
-              </>
-            )}
-
-            <label className={estilos.aceite}>
-              <input type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} />
-              <span>
-                Autorizo o uso dos meus dados para credenciamento, controle de presença e emissão
-                do certificado deste evento.
+          <div className={estilos.chipsContainer}>
+            {dataFormatada && (
+              <span className={estilos.chip} title="Data do evento">
+                <CalendarIcon size={14} color="#3b5bff" />
+                {dataFormatada}
               </span>
-            </label>
-
-            {erro && (
-              <p role="alert" className={estilos.erro}>
-                {erro}
-              </p>
             )}
+            {horarioFormatado && (
+              <span className={estilos.chip} title="Horário">
+                <ClockIcon size={14} color="#3b5bff" />
+                {horarioFormatado}
+              </span>
+            )}
+            {(c.local || evento.location) && (
+              <span className={estilos.chip} title="Local">
+                <MapPinIcon size={14} color="#3b5bff" />
+                {c.local ?? evento.location}
+              </span>
+            )}
+            <span className={estilos.chip} title="Certificado">
+              <CheckCircleIcon size={14} color="#10b981" />
+              {c.cargaHoraria ?? "Com certificado"}
+            </span>
+          </div>
 
-            <button type="submit" className={`${estilos.botao} ${estilos.espaco}`} disabled={enviando}>
-              {enviando ? "Enviando…" : "Confirmar inscrição"}
-            </button>
+          {descricaoExibicao && (
+            <div className={estilos.cartaoModerno} style={{ padding: "18px 20px" }}>
+              <p className={estilos.lead} style={{ margin: 0, fontSize: "14px", lineHeight: "1.6" }}>
+                {descricaoExibicao}
+              </p>
+            </div>
+          )}
 
-            <p className={estilos.centro}>
-              Já se inscreveu? <Link href="/">Acesse seu QR Code</Link>
+          {c.destaques && c.destaques.length > 0 && (
+            <div className={estilos.destaques}>
+              {c.destaques.map((d) => (
+                <article key={d.titulo} className={estilos.destaque}>
+                  <h2>{d.titulo}</h2>
+                  <p>{d.texto}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Formulário de Inscrição */}
+        <section className={estilos.cartaoModerno}>
+          <div style={{ marginBottom: "20px" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 4px", color: "var(--tinta)" }}>
+              Formulário de Inscrição
+            </h2>
+            <p className={estilos.lead} style={{ fontSize: "14px", margin: 0 }}>
+              Preencha seus dados para receber o QR Code de acesso e certificado.
             </p>
-          </form>
-        )}
-      </section>
+          </div>
+
+          {(!evento.registrationsOpen || evento.registrationInPortal === false) ? (
+            <div style={{ textAlign: "center", padding: "28px 16px", background: "rgba(255,255,255,0.02)", borderRadius: "14px", border: "1px solid var(--linha)" }}>
+              <p className={estilos.fechado} style={{ fontSize: "15px", fontWeight: 600, margin: "0 0 10px" }}>
+                As inscrições para este evento estão encerradas.
+              </p>
+              <p className={estilos.lead} style={{ fontSize: "14px", margin: "0 0 18px" }}>
+                Novas inscrições não estão sendo aceitas no momento.
+              </p>
+              <Link href="/" className={estilos.botao} style={{ display: "inline-flex", textDecoration: "none", width: "auto", padding: "0 20px" }}>
+                Já é inscrito? Acesse seu QR Code
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={enviar} className={estilos.form} noValidate id="inscricao">
+              {exigeNome && (
+                <>
+                  <label className={estilos.campo}>
+                    Nome
+                    <input
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value)}
+                      required
+                      autoComplete="given-name"
+                      placeholder="Maria"
+                    />
+                  </label>
+
+                  <label className={estilos.campo}>
+                    Sobrenome
+                    <input
+                      value={sobrenome}
+                      onChange={(e) => setSobrenome(e.target.value)}
+                      required
+                      autoComplete="family-name"
+                      placeholder="Souza"
+                    />
+                    <small>Nome e sobrenome saem como você escrever no certificado.</small>
+                  </label>
+                </>
+              )}
+
+              {exigeEmail && (
+                <label className={estilos.campo}>
+                  E-mail
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailError || emailSuggestion) {
+                        setEmailError(null);
+                        setEmailSuggestion(null);
+                      }
+                    }}
+                    onBlur={handleEmailBlur}
+                    required
+                    autoComplete="email"
+                    inputMode="email"
+                    placeholder="seu@email.com"
+                  />
+                  <small>É por ele que você acessa seu QR Code e o certificado.</small>
+                  {emailSuggestion && (
+                    <div className={estilos.sugestao}>
+                      <span>
+                        Você quis dizer <strong>{emailSuggestion}</strong>?
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmail(emailSuggestion);
+                          setEmailSuggestion(null);
+                          setEmailError(null);
+                        }}
+                      >
+                        Corrigir
+                      </button>
+                    </div>
+                  )}
+                  {emailError && !emailSuggestion && (
+                    <span role="alert" className={estilos.erroCampo}>
+                      {emailError}
+                    </span>
+                  )}
+                </label>
+              )}
+
+              {exigeCpf && (
+                <label className={estilos.campo}>
+                  CPF
+                  <input
+                    value={cpf}
+                    onChange={(e) => setCpf(formatarCpf(e.target.value))}
+                    required
+                    inputMode="numeric"
+                    placeholder="000.000.000-00"
+                  />
+                </label>
+              )}
+
+              {exigeTelefone && (
+                <label className={estilos.campo}>
+                  Celular / WhatsApp
+                  <input
+                    value={telefone}
+                    onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
+                    required
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="(00) 00000-0000"
+                  />
+                  <small>Utilizado para comunicações importantes do evento.</small>
+                </label>
+              )}
+
+              {equipeConfig && (
+                <>
+                  <label className={estilos.aceite}>
+                    <input
+                      type="checkbox"
+                      checked={semEquipe}
+                      onChange={(e) => setSemEquipe(e.target.checked)}
+                    />
+                    <span>
+                      Não tenho equipe formada — quero ser alocado(a) em uma equipe sorteada pela
+                      organização.
+                    </span>
+                  </label>
+
+                  {!semEquipe && (
+                    <>
+                      <label className={estilos.campo}>
+                        Nome da equipe
+                        <input
+                          value={nomeEquipe}
+                          onChange={(e) => setNomeEquipe(e.target.value)}
+                          required
+                          placeholder="Nome da sua equipe"
+                        />
+                        <small>
+                          Você é o líder/representante da equipe. Informe abaixo o nome dos outros{" "}
+                          {integrantes.length} integrantes — cada um recebe certificado individual.
+                        </small>
+                      </label>
+
+                      {integrantes.map((valor, i) => (
+                        <label className={estilos.campo} key={i}>
+                          {`Integrante ${i + 2} — nome completo`}
+                          <input
+                            value={valor}
+                            onChange={(e) => {
+                              const copia = [...integrantes];
+                              copia[i] = e.target.value;
+                              setIntegrantes(copia);
+                            }}
+                            required
+                            placeholder="Nome completo do colega"
+                          />
+                        </label>
+                      ))}
+                    </>
+                  )}
+                </>
+              )}
+
+              <label className={estilos.aceite}>
+                <input
+                  type="checkbox"
+                  checked={aceite}
+                  onChange={(e) => setAceite(e.target.checked)}
+                  required
+                />
+                <span>
+                  Concordo com o uso dos meus dados para credenciamento, emissão de certificado e
+                  comunicações do evento.
+                </span>
+              </label>
+
+              {erro && (
+                <p role="alert" className={estilos.erro}>
+                  {erro}
+                </p>
+              )}
+
+              <button type="submit" disabled={enviando} className={estilos.botao}>
+                {enviando ? "Inscrevendo…" : "Concluir inscrição"}
+              </button>
+            </form>
+          )}
+        </section>
+      </div>
     </PortalShell>
   );
 }
