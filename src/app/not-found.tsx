@@ -26,6 +26,12 @@ function destinoAntigo(pathname: string): string | null {
   m = caminho.match(/^\/([^/]+)\/trabalhos$/);
   if (m) return `/trabalhos/?e=${m[1]}`;
 
+  const seg = caminho.replace(/^\//, "");
+  const rotasConhecidas = ["inscricao", "realizados", "checkin", "copol", "trabalhos", "eti-summit-2026"];
+  if (seg && !seg.includes("/") && !rotasConhecidas.includes(seg)) {
+    return `/inscricao/?e=${encodeURIComponent(seg)}`;
+  }
+
   return null;
 }
 

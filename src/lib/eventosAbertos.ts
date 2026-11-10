@@ -3,7 +3,11 @@ import { API_URL } from "./backend";
 export interface EventoAberto {
   slug: string;
   name: string;
+  description?: string | null;
+  location?: string | null;
   startDate?: string;
+  endDate?: string;
+  bannerUrl?: string | null;
 }
 
 /**
@@ -38,7 +42,11 @@ export async function buscarEventosAbertos(): Promise<EventoAberto[]> {
       .map((e) => ({
         slug: e.slug || slugificar(e.name || ""),
         name: e.name,
+        description: e.description || null,
+        location: e.location || null,
         startDate: e.startDate,
+        endDate: e.endDate,
+        bannerUrl: e.bannerUrl || null,
       }));
   } catch {
     return [];
