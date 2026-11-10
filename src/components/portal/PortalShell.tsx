@@ -54,13 +54,13 @@ export function PortalShell({
       <div className={`${estilos.coluna} ${larga ? estilos.larga : ""}`}>
         <Link href="/" className={estilos.cabecalho} aria-label="LSPK Eventos — início">
           <Marca />
-          <span className={estilos.nomes}>
+          <span className={`${estilos.nomes} notranslate`} translate="no">
             <span className={estilos.nomeMarca}>LSPK Eventos</span>
             <span className={estilos.rotuloMono}>LSPK Technology</span>
           </span>
         </Link>
 
-        <nav aria-label="Seções" className={estilos.abas}>
+        <nav aria-label="Seções" className={`${estilos.abas} notranslate`} translate="no">
           {ABAS.map((a) => (
             <Link
               key={a.id}
