@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { comBase } from "@/lib/caminho";
 import {
   searchSubmissionsByEmail,
   getSubmissionEditDetails,
@@ -465,7 +466,7 @@ export function TrabalhosCliente({ slug }: { slug: string }) {
         <div className="text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/lspk-symbol.svg" alt="LSPK Technology" className="h-14 w-14" />
+            <img src={comBase("/lspk-symbol.svg")} alt="LSPK Technology" className="h-14 w-14" />
           </div>
           <p className="mono text-[0.7rem] font-medium uppercase tracking-[0.18em] text-[var(--primary)]">
             LSPK Eventos · {nomeEvento ?? "Portal de Trabalhos"}

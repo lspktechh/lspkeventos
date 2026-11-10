@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PortalShell } from "@/components/portal/PortalShell";
 import estilos from "@/components/portal/portal.module.css";
+import { comBase, semBase } from "@/lib/caminho";
 
 /**
  * Endereços que já foram divulgados e deixaram de existir como arquivo.
@@ -32,10 +33,10 @@ export default function PaginaNaoEncontrada() {
   const [redirecionando, setRedirecionando] = useState(false);
 
   useEffect(() => {
-    const destino = destinoAntigo(window.location.pathname);
+    const destino = destinoAntigo(semBase(window.location.pathname));
     if (destino) {
       setRedirecionando(true);
-      window.location.replace(destino + window.location.hash);
+      window.location.replace(comBase(destino) + window.location.hash);
     }
   }, []);
 

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { comBase } from "@/lib/caminho";
 
 /**
  * Créditos de desenvolvimento e apoio.
@@ -43,7 +44,7 @@ export function CreditosParceiros({
           className="inline-flex items-center rounded-lg bg-white px-2.5 py-1.5 transition-transform hover:scale-105 cursor-pointer"
         >
           <Image
-            src="/partners/lspk-rodape.png"
+            src={comBase("/partners/lspk-rodape.png")}
             alt="LSPK Technology"
             width={249}
             height={96}
@@ -61,7 +62,7 @@ export function CreditosParceiros({
               className="inline-flex items-center rounded-lg bg-white px-2.5 py-1.5"
             >
               <Image
-                src={p.src}
+                src={comBase(p.src)}
                 alt={p.nome}
                 width={p.largura}
                 height={p.altura}

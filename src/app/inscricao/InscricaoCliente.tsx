@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { loginAttendee, verifyEmail } from "@/lib/api";
 import { API_URL } from "@/lib/backend";
+import { comBase } from "@/lib/caminho";
 import { PortalShell } from "@/components/portal/PortalShell";
 import estilos from "@/components/portal/portal.module.css";
 
@@ -291,7 +292,7 @@ export function InscricaoCliente({ slug }: { slug: string }) {
             <div className={estilos.logoParceiro}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/partners/ecohub-rodape.png"
+                src={comBase("/partners/ecohub-rodape.png")}
                 alt="Ecohub — ecossistema de inovação"
                 className={estilos.logoParceiroImg}
               />
