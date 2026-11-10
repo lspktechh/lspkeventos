@@ -310,8 +310,8 @@ export function InscricaoCliente({ slug }: { slug: string }) {
   const jaComecou = new Date(evento.startDate).getTime() < Date.now();
 
   return (
-    <PortalShell aba="inscricao" larga>
-      <div style={{ marginBottom: "20px" }}>
+    <PortalShell aba="inscricao">
+      <div style={{ marginBottom: "16px" }}>
         <Link
           href="/inscricao"
           style={{
@@ -330,7 +330,7 @@ export function InscricaoCliente({ slug }: { slug: string }) {
 
       <div className={estilos.layoutInscricao}>
         {/* Painel com detalhes do evento */}
-        <section className={estilos.painelDetalhes}>
+        <section className={`${estilos.cartaoModerno} ${estilos.painelDetalhes}`}>
           {banner && (
             <div className={estilos.bannerHero}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -353,7 +353,7 @@ export function InscricaoCliente({ slug }: { slug: string }) {
               <span className={estilos.pontoAberto}></span>
               {jaComecou ? "Inscrições abertas" : "Próximo evento"}
             </span>
-            <h1 className={estilos.titulo} style={{ marginTop: "6px" }}>{tituloExibicao}</h1>
+            <h1 className={estilos.titulo} style={{ marginTop: "4px" }}>{tituloExibicao}</h1>
             {c.heroSubtitulo && <p className={estilos.subtituloEvento}>{c.heroSubtitulo}</p>}
           </div>
 
@@ -383,11 +383,9 @@ export function InscricaoCliente({ slug }: { slug: string }) {
           </div>
 
           {descricaoExibicao && (
-            <div className={estilos.cartaoModerno} style={{ padding: "18px 20px" }}>
-              <p className={estilos.lead} style={{ margin: 0, fontSize: "14px", lineHeight: "1.6" }}>
-                {descricaoExibicao}
-              </p>
-            </div>
+            <p className={estilos.lead} style={{ margin: "4px 0 0", fontSize: "14px", lineHeight: "1.6" }}>
+              {descricaoExibicao}
+            </p>
           )}
 
           {c.destaques && c.destaques.length > 0 && (
@@ -432,7 +430,7 @@ export function InscricaoCliente({ slug }: { slug: string }) {
           ) : (
             <form onSubmit={enviar} className={estilos.form} noValidate id="inscricao">
               {exigeNome && (
-                <>
+                <div className={estilos.gridCamposDuplo}>
                   <label className={estilos.campo}>
                     Nome
                     <input
@@ -455,7 +453,7 @@ export function InscricaoCliente({ slug }: { slug: string }) {
                     />
                     <small>Nome e sobrenome saem como você escrever no certificado.</small>
                   </label>
-                </>
+                </div>
               )}
 
               {exigeEmail && (
