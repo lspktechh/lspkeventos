@@ -42,6 +42,9 @@ const monoPortal = localFont({
 export const metadata: Metadata = {
   title: "LSPK Eventos",
   description: "Acesse seu QR Code, comprovante de presença e certificado, ou faça sua inscrição.",
+  other: {
+    google: "notranslate",
+  },
 };
 
 // Quase todo acesso é pelo celular, na fila da entrada. A barra do
@@ -54,8 +57,19 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${grotesk.variable} ${mono.variable} ${monoPortal.variable}`}>
-      <body>{children}</body>
+    <html
+      lang="pt-BR"
+      translate="no"
+      className={`notranslate ${grotesk.variable} ${mono.variable} ${monoPortal.variable}`}
+    >
+      <head>
+        <meta name="google" content="notranslate" />
+        <meta name="googlebot" content="notranslate" />
+        <meta name="robots" content="notranslate" />
+      </head>
+      <body className="notranslate" translate="no">
+        {children}
+      </body>
     </html>
   );
 }
