@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { API_URL } from "@/lib/backend";
 import { dataCurta } from "@/lib/datas";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Seta } from "@/components/portal/Seta";
 import estilos from "@/components/portal/portal.module.css";
-
-export const dynamic = "force-dynamic";
 
 interface EventoRealizado {
   slug: string | null;
@@ -28,7 +27,7 @@ export default function RealizadosPage() {
   const [falhou, setFalhou] = useState(false);
 
   useEffect(() => {
-    fetch("/api/publico/eventos-realizados")
+    fetch(`${API_URL}/public/events/closed`)
       .then(async (r) => {
         const corpo = await r.json();
         if (!r.ok) throw new Error("falha");

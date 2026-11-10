@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { loginAttendee, verifyEmail } from "@/lib/api";
+import { API_URL } from "@/lib/backend";
 import { PortalShell } from "@/components/portal/PortalShell";
 import estilos from "@/components/portal/portal.module.css";
 
@@ -138,7 +139,7 @@ export function InscricaoCliente({ slug }: { slug: string }) {
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/publico/evento/${encodeURIComponent(slug)}`)
+    fetch(`${API_URL}/public/events/${encodeURIComponent(slug)}`)
       .then(async (r) => {
         const corpo = await r.json();
         if (!r.ok || !corpo?.data) throw new Error(corpo?.error?.message ?? "Evento não encontrado");
@@ -198,11 +199,10 @@ export function InscricaoCliente({ slug }: { slug: string }) {
 
     setEnviando(true);
     try {
-      const r = await fetch("/api/publico/inscricao", {
+      const r = await fetch(`${API_URL}/events/${encodeURIComponent(evento.id)}/inscriptions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          eventId: evento.id,
           // O backend guarda um nome só; o formulário pede separado
           // porque é como as pessoas esperam preencher.
           name: `${nome.trim()} ${sobrenome.trim()}`.replace(/\s+/g, " ").trim(),

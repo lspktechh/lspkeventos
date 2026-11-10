@@ -9,8 +9,6 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { Seta } from "@/components/portal/Seta";
 import estilos from "@/components/portal/portal.module.css";
 
-export const dynamic = "force-dynamic";
-
 export default function AcessarPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");

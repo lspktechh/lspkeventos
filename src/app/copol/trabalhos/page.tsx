@@ -1,6 +1,4 @@
-import { TrabalhosCliente } from "../../[slug]/trabalhos/TrabalhosCliente";
-
-export const dynamic = "force-dynamic";
+import { TrabalhosCliente } from "../../trabalhos/TrabalhosCliente";
 
 export default function PaginaTrabalhosCopol() {
   return <TrabalhosCliente slug="copol" />;

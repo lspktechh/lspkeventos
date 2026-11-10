@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   searchSubmissionsByEmail,
   getSubmissionEditDetails,
   resubmitSubmission,
   verifyPublicAdminPassword,
   adminEditPublicSubmission,
+  baixarArquivoPublico,
+  buscarArquivoPublico,
   type PublicSubmission,
   type PublicAuthor,
   type SubmissionEditDetailsResponse,
@@ -158,6 +160,14 @@ export function TrabalhosCliente({ slug }: { slug: string }) {
   const [arquivoAberto, setArquivoAberto] = useState<ArquivoVisualizacao | null>(null);
   const [carregandoViewer, setCarregandoViewer] = useState(true);
 
+  // Libera da memória o arquivo do visualizador quando ele fecha ou troca.
+  useEffect(() => {
+    const url = arquivoAberto?.url;
+    return () => {
+      if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+    };
+  }, [arquivoAberto?.url]);
+
   // Escuta tecla ESC e trava scroll quando visualizador está aberto
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -177,23 +187,40 @@ export function TrabalhosCliente({ slug }: { slug: string }) {
     };
   }, [arquivoAberto]);
 
-  function abrirDocumento(
+  // Cada abertura ganha um número: se a pessoa abrir outro arquivo antes do
+  // primeiro terminar de baixar, só o último vale.
+  const aberturaRef = useRef(0);
+
+  async function abrirDocumento(
     submissionId: string,
     file: { id: string; fileName?: string | null; fileSizeBytes?: number | null },
     subTitle: string
   ) {
     const nome = file.fileName || "documento.pdf";
     const ext = nome.split(".").pop()?.toLowerCase() || "pdf";
-    const url = `/api/publico/trabalhos/arquivo/${encodeURIComponent(submissionId)}/${encodeURIComponent(file.id)}`;
+    const abertura = ++aberturaRef.current;
     setCarregandoViewer(true);
     setArquivoAberto({
       titulo: subTitle,
       nomeArquivo: nome,
-      url,
-      downloadUrl: `${url}?download=1`,
+      url: "",
+      downloadUrl: "",
       tamanho: file.fileSizeBytes ?? undefined,
       tipo: ext,
     });
+    try {
+      const blob = await buscarArquivoPublico(submissionId, file.id);
+      const url = URL.createObjectURL(blob);
+      if (abertura !== aberturaRef.current) {
+        URL.revokeObjectURL(url);
+        return;
+      }
+      setArquivoAberto((atual) => (atual ? { ...atual, url, downloadUrl: url } : atual));
+    } catch {
+      if (abertura !== aberturaRef.current) return;
+      setArquivoAberto(null);
+      setErro("Não consegui abrir o arquivo. Tente novamente.");
+    }
   }
 
   function abrirNovoArquivo(file: File) {
@@ -687,14 +714,18 @@ export function TrabalhosCliente({ slug }: { slug: string }) {
                                   ({formatarBytes(f.fileSizeBytes)})
                                 </span>
                               )}
-                              <a
-                                href={`/api/publico/trabalhos/arquivo/${encodeURIComponent(sub.id)}/${encodeURIComponent(f.id)}?download=1`}
-                                download={f.fileName ?? "arquivo"}
-                                className="text-[var(--muted-foreground)] hover:text-white ml-1 p-0.5"
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  baixarArquivoPublico(sub.id, f.id, f.fileName ?? "arquivo").catch(() =>
+                                    setErro("Não consegui baixar o arquivo. Tente novamente.")
+                                  )
+                                }
+                                className="text-[var(--muted-foreground)] hover:text-white ml-1 p-0.5 cursor-pointer"
                                 title="Baixar arquivo no dispositivo"
                               >
                                 <DownloadIcon className="h-3.5 w-3.5 shrink-0" />
-                              </a>
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -910,14 +941,18 @@ export function TrabalhosCliente({ slug }: { slug: string }) {
                           ({formatarBytes(f.fileSizeBytes)})
                         </span>
                       )}
-                      <a
-                        href={`/api/publico/trabalhos/arquivo/${encodeURIComponent(trabalhoAberto.id)}/${encodeURIComponent(f.id)}?download=1`}
-                        download={f.fileName ?? "arquivo"}
-                        className="text-[var(--muted-foreground)] hover:text-white ml-1 p-0.5"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          baixarArquivoPublico(trabalhoAberto.id, f.id, f.fileName ?? "arquivo").catch(() =>
+                            setErro("Não consegui baixar o arquivo. Tente novamente.")
+                          )
+                        }
+                        className="text-[var(--muted-foreground)] hover:text-white ml-1 p-0.5 cursor-pointer"
                         title="Baixar arquivo"
                       >
                         <DownloadIcon className="h-4 w-4 shrink-0" />
-                      </a>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -1439,9 +1474,10 @@ export function TrabalhosCliente({ slug }: { slug: string }) {
 
               <div className="flex items-center gap-2 shrink-0">
                 <a
-                  href={arquivoAberto.downloadUrl}
+                  href={arquivoAberto.downloadUrl || undefined}
                   download={arquivoAberto.nomeArquivo}
-                  className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] hover:border-[var(--primary)] transition"
+                  aria-disabled={!arquivoAberto.downloadUrl}
+                  className={`${arquivoAberto.downloadUrl ? "" : "pointer-events-none opacity-50 "}flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] hover:border-[var(--primary)] transition`}
                   title="Baixar cópia no dispositivo"
                 >
                   <DownloadIcon className="h-3.5 w-3.5 shrink-0" />
@@ -1463,7 +1499,7 @@ export function TrabalhosCliente({ slug }: { slug: string }) {
             <div className="relative flex-1 bg-[#181a1d] overflow-hidden flex flex-col">
               {arquivoAberto.tipo === "pdf" ? (
                 <>
-                  {carregandoViewer && (
+                  {(carregandoViewer || !arquivoAberto.url) && (
                     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#101214]">
                       <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
                       <span className="text-xs text-[var(--muted-foreground)]">
@@ -1471,12 +1507,14 @@ export function TrabalhosCliente({ slug }: { slug: string }) {
                       </span>
                     </div>
                   )}
-                  <iframe
-                    src={`${arquivoAberto.url}#toolbar=1&navpanes=0`}
-                    title={arquivoAberto.nomeArquivo}
-                    className="w-full h-full border-0"
-                    onLoad={() => setCarregandoViewer(false)}
-                  />
+                  {arquivoAberto.url && (
+                    <iframe
+                      src={`${arquivoAberto.url}#toolbar=1&navpanes=0`}
+                      title={arquivoAberto.nomeArquivo}
+                      className="w-full h-full border-0"
+                      onLoad={() => setCarregandoViewer(false)}
+                    />
+                  )}
                 </>
               ) : (
                 <div className="flex flex-1 flex-col items-center justify-center p-8 text-center space-y-4">
@@ -1492,9 +1530,10 @@ export function TrabalhosCliente({ slug }: { slug: string }) {
                     </p>
                   </div>
                   <a
-                    href={arquivoAberto.downloadUrl}
+                    href={arquivoAberto.downloadUrl || undefined}
                     download={arquivoAberto.nomeArquivo}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-6 py-2.5 text-xs font-bold text-white transition hover:opacity-90"
+                    aria-disabled={!arquivoAberto.downloadUrl}
+                    className={`${arquivoAberto.downloadUrl ? "" : "pointer-events-none opacity-50 "}inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-6 py-2.5 text-xs font-bold text-white transition hover:opacity-90`}
                   >
                     <DownloadIcon className="h-4 w-4" />
                     Baixar {arquivoAberto.nomeArquivo}

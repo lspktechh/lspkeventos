@@ -1,3 +1,5 @@
+import { API_URL } from "./backend";
+
 export interface EventoAberto {
   slug: string;
   name: string;
@@ -11,7 +13,7 @@ export interface EventoAberto {
  * O COPOL fica de fora porque tem site e inscrição próprios.
  */
 export async function buscarEventosAbertos(): Promise<EventoAberto[]> {
-  const r = await fetch("/api/publico/eventos-abertos");
+  const r = await fetch(`${API_URL}/public/events/open-registration`);
   const corpo = await r.json();
   const lista: EventoAberto[] = Array.isArray(corpo?.data) ? corpo.data : [];
   return lista

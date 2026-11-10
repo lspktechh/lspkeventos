@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://137.131.233.254:3000";
+import { API_URL } from "./backend";
 
 export interface ParticipantData {
   id: string;
@@ -42,7 +42,7 @@ export interface ApiResponse<T> {
 export async function loginAttendee(
   email: string
 ): Promise<LoginResponse> {
-  const res = await fetch("/api/attendee/login", {
+  const res = await fetch(`${API_URL}/attendee/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
@@ -60,7 +60,7 @@ export async function loginAttendee(
 export async function selectEvent(
   participantId: string
 ): Promise<LoginResponse> {
-  const res = await fetch("/api/attendee/select-event", {
+  const res = await fetch(`${API_URL}/attendee/select-event`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ participantId }),
@@ -78,7 +78,7 @@ export async function selectEvent(
 export async function getParticipantMe(
   token: string
 ): Promise<ApiResponse<ParticipantData>> {
-  const res = await fetch("/api/attendee/me", {
+  const res = await fetch(`${API_URL}/attendee/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -101,7 +101,7 @@ export interface MyDocuments {
 }
 
 export async function getMyDocuments(token: string, eventId: string): Promise<ApiResponse<MyDocuments>> {
-  const res = await fetch(`/api/attendee/my-documents?eventId=${encodeURIComponent(eventId)}`, {
+  const res = await fetch(`${API_URL}/events/${encodeURIComponent(eventId)}/my-documents`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.json();
@@ -130,14 +130,14 @@ export interface AttendeeHandsOn {
 }
 
 export async function getAttendeeHandsOn(token: string): Promise<ApiResponse<AttendeeHandsOn[]>> {
-  const res = await fetch("/api/attendee/hands-on", {
+  const res = await fetch(`${API_URL}/attendee/hands-on`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.json();
 }
 
-async function downloadPdf(path: string, token: string, eventId: string, filename: string): Promise<void> {
-  const res = await fetch(`${path}?eventId=${encodeURIComponent(eventId)}`, {
+async function downloadPdf(path: string, token: string, filename: string): Promise<void> {
+  const res = await fetch(`${API_URL}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {
@@ -156,14 +156,17 @@ async function downloadPdf(path: string, token: string, eventId: string, filenam
 }
 
 export function downloadCertificate(token: string, eventId: string, participantName: string): Promise<void> {
-  return downloadPdf("/api/attendee/certificate", token, eventId, `certificado-${participantName.replace(/\s+/g, "_")}.pdf`);
+  return downloadPdf(
+    `/events/${encodeURIComponent(eventId)}/certificates/download`,
+    token,
+    `certificado-${participantName.replace(/\s+/g, "_")}.pdf`
+  );
 }
 
 export function downloadAttendanceProof(token: string, eventId: string, participantName: string): Promise<void> {
   return downloadPdf(
-    "/api/attendee/attendance-proof",
+    `/events/${encodeURIComponent(eventId)}/attendance-proof/download`,
     token,
-    eventId,
     `comprovante-${participantName.replace(/\s+/g, "_")}.pdf`
   );
 }
@@ -174,7 +177,7 @@ export function connectSSE(
   onError?: (error: Event) => void
 ): () => void {
   const eventSource = new EventSource(
-    `/api/attendee/checkin-status?token=${encodeURIComponent(token)}`
+    `${API_URL}/attendee/checkin-status?token=${encodeURIComponent(token)}`
   );
 
   eventSource.onmessage = (event) => {
@@ -278,7 +281,7 @@ export async function searchSubmissionsByEmail(
   email: string
 ): Promise<SearchSubmissionsResponse> {
   const res = await fetch(
-    `/api/publico/trabalhos/${encodeURIComponent(slug)}?email=${encodeURIComponent(email)}`
+    `${API_URL}/public/events/${encodeURIComponent(slug)}/submissions?email=${encodeURIComponent(email)}`
   );
   const data = await res.json();
   if (!res.ok || !data.success) {
@@ -293,7 +296,7 @@ export async function getSubmissionEditDetails(
   email: string
 ): Promise<SubmissionEditDetailsResponse> {
   const res = await fetch(
-    `/api/publico/trabalhos/${encodeURIComponent(slug)}/${encodeURIComponent(submissionId)}?email=${encodeURIComponent(email)}`
+    `${API_URL}/public/events/${encodeURIComponent(slug)}/submissions/${encodeURIComponent(submissionId)}/edit-details?email=${encodeURIComponent(email)}`
   );
   const data = await res.json();
   if (!res.ok || !data.success) {
@@ -308,7 +311,7 @@ export async function resubmitSubmission(
   input: ResubmitInput
 ): Promise<PublicSubmission> {
   const res = await fetch(
-    `/api/publico/trabalhos/${encodeURIComponent(slug)}/${encodeURIComponent(submissionId)}`,
+    `${API_URL}/public/events/${encodeURIComponent(slug)}/submissions/${encodeURIComponent(submissionId)}/resubmit`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -338,7 +341,7 @@ export async function verifyPublicAdminPassword(
   password: string
 ): Promise<boolean> {
   const res = await fetch(
-    `/api/publico/trabalhos/${encodeURIComponent(slug)}/${encodeURIComponent(submissionId)}/verify-password`,
+    `${API_URL}/public/events/${encodeURIComponent(slug)}/submissions/${encodeURIComponent(submissionId)}/verify-admin-password`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -358,7 +361,7 @@ export async function adminEditPublicSubmission(
   input: AdminEditPublicPayload
 ): Promise<PublicSubmission> {
   const res = await fetch(
-    `/api/publico/trabalhos/${encodeURIComponent(slug)}/${encodeURIComponent(submissionId)}/admin-edit`,
+    `${API_URL}/public/events/${encodeURIComponent(slug)}/submissions/${encodeURIComponent(submissionId)}/admin-edit`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -403,4 +406,32 @@ export async function verifyEmail(email: string, checkMx = true): Promise<EmailV
     reason: json.error?.message || "E-mail inválido.",
     details: { syntax: false, disposable: false, typo: false, hasMx: false },
   };
+}
+
+// --- Arquivos de trabalhos ---
+
+/** Baixa o arquivo de um trabalho como Blob (para visualizar ou salvar). */
+export async function buscarArquivoPublico(submissionId: string, fileId: string): Promise<Blob> {
+  const res = await fetch(
+    `${API_URL}/public/submissions/${encodeURIComponent(submissionId)}/files/${encodeURIComponent(fileId)}`
+  );
+  if (!res.ok) throw new Error("Arquivo não encontrado");
+  return res.blob();
+}
+
+/** Salva o arquivo de um trabalho no dispositivo. */
+export async function baixarArquivoPublico(
+  submissionId: string,
+  fileId: string,
+  nomeArquivo: string
+): Promise<void> {
+  const blob = await buscarArquivoPublico(submissionId, fileId);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = nomeArquivo;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }

@@ -4,8 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { loginAttendee } from "@/lib/api";
 import { CreditosParceiros } from "@/components/CreditosParceiros";
-
-export const dynamic = "force-dynamic";
+import { API_URL } from "@/lib/backend";
 
 /**
  * ETI Summit 2026 — Semana Acadêmica de Tecnologia e Engenharia.
@@ -52,7 +51,7 @@ export default function EtiSummitPage() {
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/publico/eventos-abertos")
+    fetch(`${API_URL}/public/events/open-registration`)
       .then((r) => r.json())
       .then((corpo) => {
         const lista: { slug: string; startDate?: string }[] = Array.isArray(corpo?.data) ? corpo.data : [];
@@ -166,7 +165,7 @@ export default function EtiSummitPage() {
             return (
               <a
                 key={a.slug}
-                href={`/inscricao/${a.slug}`}
+                href={`/inscricao/?e=${encodeURIComponent(a.slug)}`}
                 className="group flex items-center justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--muted)]/60 p-4 transition hover:border-[var(--primary)] hover:bg-[var(--primary)]/5"
               >
                 <div className="flex min-w-0 items-center gap-4">
