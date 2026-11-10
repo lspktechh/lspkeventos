@@ -1,35 +1,40 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
 /**
  * As fontes da marca LSPK: Space Grotesk e a fonte de dados.
  *
- * Servidas pelo próprio Next (`next/font` baixa e hospeda junto do site),
- * e não pelo Google em tempo de execução: sem chamada externa no
- * carregamento, sem depender de um terceiro estar no ar, e sem o salto de
- * layout que acontece quando a fonte chega depois do texto.
+ * Hospedadas no próprio repositório (src/app/fonts), e não baixadas do Google
+ * durante o build. O download em tempo de build falhava de forma intermitente
+ * ("An error occurred in `next/font`") e derrubava o deploy inteiro; com os
+ * arquivos aqui o build não depende de nenhuma rede, e a página também não
+ * faz chamada externa ao carregar. Só o subconjunto latino (cobre o português).
+ * Licenças em src/app/fonts/LICENSES.md.
  *
- * O portal (Acessar / Inscrição / Realizados) usa JetBrains Mono nos
- * rótulos e datas; as telas mais antigas seguem com IBM Plex Mono.
+ * O portal (Acessar / Inscrição / Realizados) usa JetBrains Mono nos rótulos e
+ * datas; as telas mais antigas seguem com IBM Plex Mono.
  */
-const grotesk = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const grotesk = localFont({
+  src: "./fonts/space-grotesk-latin.woff2",
+  weight: "300 700",
+  style: "normal",
   variable: "--fonte-titulo",
   display: "swap",
 });
 
-const mono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["500"],
+const mono = localFont({
+  src: "./fonts/ibm-plex-mono-500-latin.woff2",
+  weight: "500",
+  style: "normal",
   variable: "--fonte-mono",
   display: "swap",
 });
 
-const monoPortal = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
+const monoPortal = localFont({
+  src: "./fonts/jetbrains-mono-latin.woff2",
+  weight: "400 500",
+  style: "normal",
   variable: "--fonte-mono-portal",
   display: "swap",
 });
