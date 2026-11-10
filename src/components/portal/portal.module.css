@@ -71,9 +71,20 @@
 .cabecalho {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 14px;
   color: var(--tinta);
   text-decoration: none;
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+  .cabecalho {
+    justify-content: flex-start;
+    width: fit-content;
+    margin: 0;
+  }
 }
 .pagina a.cabecalho,
 .pagina a.cabecalho:hover {
@@ -139,6 +150,15 @@
 
 .rodape {
   margin-top: 72px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .rodape {
+    justify-content: flex-start;
+  }
 }
 
 /* ───────── Texto ───────── */
