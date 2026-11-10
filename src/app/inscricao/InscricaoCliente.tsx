@@ -376,7 +376,7 @@ export function InscricaoCliente({ slug }: { slug: string }) {
                 {c.local ?? evento.location}
               </span>
             )}
-            <span className={estilos.chip} title="Certificado">
+            <span className={`${estilos.chip} notranslate`} translate="no" title="Certificado">
               <CheckCircleIcon size={14} color="#10b981" />
               {c.cargaHoraria ?? "Com certificado"}
             </span>
@@ -405,7 +405,11 @@ export function InscricaoCliente({ slug }: { slug: string }) {
         {/* Formulário de Inscrição */}
         <section className={estilos.cartaoModerno}>
           <div style={{ marginBottom: "20px" }}>
-            <h2 style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 4px", color: "var(--tinta)" }}>
+            <h2
+              className="notranslate"
+              translate="no"
+              style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 4px", color: "var(--tinta)" }}
+            >
               Formulário de Inscrição
             </h2>
             <p className={estilos.lead} style={{ fontSize: "14px", margin: 0 }}>
