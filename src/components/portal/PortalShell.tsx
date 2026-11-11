@@ -45,7 +45,7 @@ export function PortalShell({
   larga = false,
   children,
 }: {
-  aba: AbaDoPortal;
+  aba?: AbaDoPortal | null;
   larga?: boolean;
   children: ReactNode;
 }) {
