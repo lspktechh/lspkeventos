@@ -11,6 +11,7 @@ export interface ParticipantData {
   event: {
     id: string;
     name: string;
+    slug?: string | null;
     location: string | null;
     startDate: string;
     endDate: string;

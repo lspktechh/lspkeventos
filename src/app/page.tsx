@@ -26,17 +26,21 @@ export default function AcessarPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const emailParam = params.get("email");
-    if (emailParam) setEmail(emailParam);
+    const eventoParam = params.get("evento") || params.get("event") || params.get("slug");
     if (params.get("certificado") === "1") setDicaCertificado(true);
+
+    if (emailParam) {
+      setEmail(emailParam);
+      executarLogin(emailParam, eventoParam);
+    }
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const executarLogin = async (emailAlvo: string, targetEventSlugOrId?: string | null) => {
     setError(null);
     setLoading(true);
 
     try {
-      const cleanEmail = email.trim().toLowerCase();
+      const cleanEmail = emailAlvo.trim().toLowerCase();
       const response = await loginAttendee(cleanEmail);
 
       const foundEvents: ParticipantData[] =
@@ -54,13 +58,38 @@ export default function AcessarPage() {
 
       setEvents(foundEvents);
 
+      let singleSession: { token: string; participant: ParticipantData } | null = null;
       if (response.data.token && response.data.participant) {
-        setSingleEventSession({
+        singleSession = {
           token: response.data.token,
           participant: response.data.participant,
-        });
+        };
+        setSingleEventSession(singleSession);
       } else {
         setSingleEventSession(null);
+      }
+
+      // Se passou evento por parametro na URL (ex: evento=inova-saude-2026), auto-seleciona
+      if (targetEventSlugOrId) {
+        const query = targetEventSlugOrId.trim().toLowerCase();
+        const matched = foundEvents.find((p) => {
+          const s = (p.event.slug || "").toLowerCase();
+          const id = (p.event.id || "").toLowerCase();
+          const n = (p.event.name || "").toLowerCase();
+          return s === query || id === query || s.includes(query) || n.includes(query);
+        });
+
+        if (matched) {
+          const tokenToUse = singleSession?.participant.id === matched.id ? singleSession.token : undefined;
+          await handleAccessEvent(matched, tokenToUse);
+          return;
+        }
+      }
+
+      // Se so houver 1 evento encontrado e veio com e-mail pela URL, auto-seleciona
+      if (foundEvents.length === 1 && singleSession) {
+        await handleAccessEvent(singleSession.participant, singleSession.token);
+        return;
       }
     } catch (err: any) {
       setError(err.message ?? "Erro ao fazer login");
@@ -69,11 +98,25 @@ export default function AcessarPage() {
     }
   };
 
-  const handleAccessEvent = async (p: ParticipantData) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams(window.location.search);
+    const eventoParam = params.get("evento") || params.get("event") || params.get("slug");
+    await executarLogin(email, eventoParam);
+  };
+
+  const handleAccessEvent = async (p: ParticipantData, tokenOverride?: string) => {
     setError(null);
     setLoading(true);
 
     try {
+      if (tokenOverride) {
+        localStorage.setItem("attendee_token", tokenOverride);
+        localStorage.setItem("attendee_data", JSON.stringify(p));
+        router.push("/checkin");
+        return;
+      }
+
       if (singleEventSession && singleEventSession.participant.id === p.id) {
         localStorage.setItem("attendee_token", singleEventSession.token);
         localStorage.setItem(
