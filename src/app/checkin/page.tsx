@@ -711,6 +711,11 @@ export default function CheckInPage() {
                       Certificado disponível apenas para quem teve presença confirmada no evento.
                     </p>
                   )}
+                  {myDocuments?.certificate.status === "LOCKED" && myDocuments.certificate.reason === "NO_EVALUATION" && (
+                    <p className="text-xs text-[var(--muted-foreground)]">
+                      Certificado liberado após responder a avaliação do evento — use este mesmo e-mail no formulário.
+                    </p>
+                  )}
                   {!myDocuments && <p className="text-xs text-[var(--muted-foreground)]">Carregando…</p>}
                 </div>
                 <button

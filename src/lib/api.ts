@@ -96,7 +96,7 @@ export interface MyDocuments {
   certificate: {
     status: CertificateDisplayStatus;
     canDownload: boolean;
-    reason: "EVENT_NOT_ENDED" | "NOT_PRESENT" | null;
+    reason: "EVENT_NOT_ENDED" | "NOT_PRESENT" | "NO_EVALUATION" | null;
     generatedAt: string | null;
   };
 }
